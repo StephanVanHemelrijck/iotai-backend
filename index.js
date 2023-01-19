@@ -14,7 +14,8 @@ server.use(bodyParser.json());
 server.use(express.static(__dirname + "/docs"));
 
 server.get("/", (req, res) => {
-  res.status(300).redirect("/index.html");
+  console.log("redirecting");
+  res.status(300).redirect("/info.html");
 });
 
 server.get("/players", (req, res) => {
