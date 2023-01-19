@@ -8,7 +8,7 @@
 <html class="no-js" lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>IOTAI REST API - Documentation</title>
+    <title>EvoMission REST API - Documentation</title>
     <meta name="description" content="" />
     <meta name="author" content="ticlekiwi" />
 
@@ -66,13 +66,13 @@
           <li class="scroll-to-link active" data-target="content-get-started">
             <a>INFO</a>
           </li>
-          <!-- <li class="scroll-to-link" data-target="content-get-users">
-            <a>GET USERS</a>
+          <li class="scroll-to-link" data-target="content-get-users">
+            <a>GET PLAYERS</a>
           </li>
           <li class="scroll-to-link" data-target="content-create-user">
-            <a>REGISTER USER</a>
+            <a>REGISTER PLAYER</a>
           </li>
-          <li class="scroll-to-link" data-target="content-login-user">
+          <!--  <li class="scroll-to-link" data-target="content-login-user">
             <a>LOGIN USER</a>
           </li>
           <li class="scroll-to-link" data-target="content-update-user">
@@ -127,7 +127,7 @@
           </p>
           <p>Make sure to check him out!</p>
           <p>
-            This is a documentation page made for the REST API of [name of app]
+            This is a documentation page made for the REST API of EvoMission
             created by IOTAI.
           </p>
         </div>
@@ -140,7 +140,7 @@
             <code class="higlighted break-word">localhost:1337/users</code>
           </p>
         </div>
-        <!-- <div class="overflow-hidden content-section" id="content-create-user">
+        <div class="overflow-hidden content-section" id="content-create-user">
           <h2>Register user</h2>
           <p>
             Adviced to create a cookie to store the user info in. Read more
@@ -155,7 +155,7 @@
             To create a new user and insert him into the database you need to
             make a POST call to the following url :<br />
             <code class="higlighted break-word"
-              >https://web2-routexploreapi.herokuapp.com/users/register</code
+              >localhost:1337/player/register</code
             >
           </p>
           <br />
@@ -169,11 +169,7 @@
             </thead>
             <tbody>
               <tr>
-                <td>username</td>
-                <td>String</td>
-              </tr>
-              <tr>
-                <td>email</td>
+                <td>name</td>
                 <td>String</td>
               </tr>
               <tr>
@@ -181,16 +177,13 @@
                 <td>String</td>
               </tr>
               <tr>
-                <td>security_question</td>
-                <td>String</td>
-              </tr>
-              <tr>
-                <td>security_question_answer</td>
+                <td>email</td>
                 <td>String</td>
               </tr>
             </tbody>
           </table>
         </div>
+        <!-- 
         <div class="overflow-hidden content-section" id="content-login-user">
           <h2>Login user</h2>
           <p>
