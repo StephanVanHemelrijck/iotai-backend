@@ -6,6 +6,7 @@ require('dotenv').config();
 
 // Make connection with MySQL database
 const DBConnection = require('./HelperFunctions/connection.js');
+const validator = require('./HelperFunctions/validation.js');
 
 const server = express();
 
@@ -15,7 +16,6 @@ server.use(bodyParser.json());
 server.use(express.static(__dirname + '/docs'));
 
 server.get('/', (req, res) => {
-    console.log('redirecting');
     res.status(300).redirect('/info.html');
 });
 
@@ -31,7 +31,6 @@ server.get('/players', (req, res) => {
 });
 
 server.post('/player/register', async (req, res) => {
-    console.log('Endpoint post player register');
     try {
         // Validation
         if (!req.body.name || !req.body.password || !req.body.email) throw new Error('Missing arguments.');
@@ -97,7 +96,44 @@ server.post('/player/register', async (req, res) => {
     }
 });
 
-server.post('/player/login', async (req, res) => {});
+server.post('/login', async (req, res) => {
+    try {
+        // Prep map (Key => Value)
+        const map = new Map();
+        // Check if EITHER name OR email is given
+        if (!req.body.name && !req.body.email) {
+            return res.status(400).send({ status: 400, message: 'Fill in either name or email.' });
+        } else if (!req.body.name && req.body.email) {
+            // Given email
+            map.set('email', req.body.email);
+        } else if (req.body.name && !req.body.email) {
+            // Given name
+            map.set('name', req.body.name);
+        }
+        map.set('password', req.body.password);
+        // VALIDATE USER INPUT
+        const validation = validator.validateUserInput(map);
+        if (validation.status != 200) return res.status(validation.status).send({ status: validation.status, message: validation.message });
+
+        // GET PLAYER BY NAME OR EMAIL
+        DBConnection.query(
+            `SELECT * FROM players WHERE name = ? OR email = ?`,
+            [validation.args.get('name'), validation.args.get('email')],
+            function (err, result) {
+                if (err) console.log(err);
+                if (result) comparePassword(result);
+            },
+        );
+
+        function comparePassword(result) {
+            if (bcrypt.compareSync(validation.args.get('password'), result[0].password))
+                return res.status(200).send({ name: result[0].name, email: result[0].email, wins: result[0].wins, played_games: result[0].played_games });
+            else return res.status(200).send({ status: 400, message: 'Wrong password.' });
+        }
+    } catch (err) {
+        console.log(err);
+    }
+});
 
 server.listen(1337, () => {
     console.log(`Listening on port 1337 at http://localhost:1337`);
