@@ -135,6 +135,7 @@ server.post('/login', async (req, res) => {
     }
 });
 
-server.listen(1337, () => {
+server.listen(1337, '0.0.0.0', (err) => {
+    if (err) throw err;
     console.log(`Listening on port 1337 at http://localhost:1337`);
 });
