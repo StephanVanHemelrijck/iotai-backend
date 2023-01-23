@@ -3,23 +3,27 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+const http = require('http');
 
 // Make connection with MySQL database
+
 const DBConnection = require('./HelperFunctions/connection.js');
+const query = require('./HelperFunctions/queries.js');
 const validator = require('./HelperFunctions/validation.js');
 
-const server = express();
+const app = express();
+const server = http.createServer(app);
 
 // Middleware
-server.use(cors());
-server.use(bodyParser.json());
-server.use(express.static(__dirname + '/docs'));
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static(__dirname + '/docs'));
 
-server.get('/', (req, res) => {
+app.get('/', (req, res) => {
     res.status(300).redirect('/info.html');
 });
 
-server.get('/players', (req, res) => {
+app.get('/players', (req, res) => {
     try {
         DBConnection.query('SELECT * FROM players', function (err, result) {
             if (err) throw err;
@@ -30,7 +34,16 @@ server.get('/players', (req, res) => {
     }
 });
 
-server.post('/player/register', async (req, res) => {
+app.get('/player/:id', async (req, res) => {
+    try {
+        const player = query.getPlayerByID(DBConnection, req.params.id);
+        res.status(200).send(player);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.post('/player/register', async (req, res) => {
     try {
         // Validation
         if (!req.body.name || !req.body.password || !req.body.email) throw new Error('Missing arguments.');
@@ -96,7 +109,7 @@ server.post('/player/register', async (req, res) => {
     }
 });
 
-server.post('/login', async (req, res) => {
+app.post('/login', async (req, res) => {
     try {
         // Prep map (Key => Value)
         const map = new Map();
@@ -135,6 +148,76 @@ server.post('/login', async (req, res) => {
     }
 });
 
-server.listen(1337, () => {
-    console.log(`Listening on port 1337 at http://localhost:1337`);
+app.post('/lobby', async (req, res) => {
+    try {
+        function createRandomInviteCode(length) {
+            let randomInviteCode = '';
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            for (let i = 0; i < length; i++) {
+                randomInviteCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return randomInviteCode;
+        }
+
+        const lobby = {
+            player_limit: 15,
+            duration: 90,
+            invite_code: createRandomInviteCode(6),
+        };
+
+        DBConnection.query('INSERT INTO lobbies SET ?', lobby, (err) => {
+            if (err) console.log(err);
+        });
+
+        res.status(200).send(lobby);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.get('/lobby/:code', async (req, res) => {
+    try {
+        DBConnection.query('SELECT * FROM lobbies WHERE invite_code = ?', req.params.code, (err, result) => {
+            if (err) console.log(err);
+            res.send(result);
+        });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.post('/lobby/:code', async (req, res) => {
+    try {
+        // TODO: ADD SAFETY METHOD SO A PLAYER CANT JOIN SAME LOBBY TWICE
+
+        // Find lobby to join based off invite code
+        const lobby = query.getLobbyByInviteCode(DBConnection, req.params.code);
+        const lobby_id = lobby.id;
+        if (lobby.player_count == lobby.player_limit) {
+            return console.log('Lobby is full');
+        }
+        DBConnection.query(`UPDATE lobbies SET player_count = ${lobby.player_count + 1}`);
+        // Find player based of ID
+        const player = query.getPlayerByID(DBConnection, req.body.player_id);
+        const player_id = player.id;
+        assignPlayerToLobby(player_id, lobby_id);
+        // assign player name to lobby id in seperate table (many to many)
+        function assignPlayerToLobby(p_id, l_id) {
+            DBConnection.query(`INSERT INTO players_lobbies (players_id, lobbies_id) VALUES (${p_id},${l_id})`, (err) => {
+                if (err) console.log(err);
+            });
+        }
+        res.send(`${player.name} joined lobby "${lobby.invite_code}"`);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+// Change string based on deployment environment
+// -> local/dev: localhost
+// -> Render: 0.0.0.0
+server.listen(1337, '0.0.0.0');
+
+server.on('listening', function () {
+    console.log(`Listening on port ${server.address().port} at ${server.address().address}`);
 });
