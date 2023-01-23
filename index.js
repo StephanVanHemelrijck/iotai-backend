@@ -137,8 +137,11 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Change localhost to 0.0.0.0 when deploying on render
+// Change string based on deployment environment
+// -> local/dev: localhost
+// -> Render: 0.0.0.0
 server.listen(1337, '0.0.0.0');
+
 server.on('listening', function () {
     console.log(`Listening on port ${server.address().port} at ${server.address().address}`);
 });
