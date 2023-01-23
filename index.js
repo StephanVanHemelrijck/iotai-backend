@@ -3,23 +3,25 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+const http = require('http');
 
 // Make connection with MySQL database
 const DBConnection = require('./HelperFunctions/connection.js');
 const validator = require('./HelperFunctions/validation.js');
 
-const server = express();
+const app = express();
+const server = http.createServer(app);
 
 // Middleware
-server.use(cors());
-server.use(bodyParser.json());
-server.use(express.static(__dirname + '/docs'));
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static(__dirname + '/docs'));
 
-server.get('/', (req, res) => {
+app.get('/', (req, res) => {
     res.status(300).redirect('/info.html');
 });
 
-server.get('/players', (req, res) => {
+app.get('/players', (req, res) => {
     try {
         DBConnection.query('SELECT * FROM players', function (err, result) {
             if (err) throw err;
@@ -30,7 +32,7 @@ server.get('/players', (req, res) => {
     }
 });
 
-server.post('/player/register', async (req, res) => {
+app.post('/player/register', async (req, res) => {
     try {
         // Validation
         if (!req.body.name || !req.body.password || !req.body.email) throw new Error('Missing arguments.');
@@ -96,7 +98,7 @@ server.post('/player/register', async (req, res) => {
     }
 });
 
-server.post('/login', async (req, res) => {
+app.post('/login', async (req, res) => {
     try {
         // Prep map (Key => Value)
         const map = new Map();
@@ -135,7 +137,8 @@ server.post('/login', async (req, res) => {
     }
 });
 
-server.listen(1337, '0.0.0.0', (err) => {
-    if (err) throw err;
-    console.log(`Listening on port 1337 at http://localhost:1337`);
+// Change localhost to 0.0.0.0 when deploying on render
+server.listen(1337, '0.0.0.0');
+server.on('listening', function () {
+    console.log(`Listening on port ${server.address().port} at ${server.address().address}`);
 });
