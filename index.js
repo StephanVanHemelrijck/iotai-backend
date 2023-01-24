@@ -6,11 +6,14 @@ require('dotenv').config();
 const http = require('http');
 
 // Make connection with MySQL database
-
-const DBConnection = require('./HelperFunctions/connection.js');
-const query = require('./HelperFunctions/queries.js');
+const pool = require('./HelperFunctions/connection.js');
 const validator = require('./HelperFunctions/validation.js');
 
+// Repositories
+const playerRepository = require('./repositories/playerRepository.js');
+const lobbyRepository = require('./repositories/lobbyRepository.js');
+
+// Express APP
 const app = express();
 const server = http.createServer(app);
 
@@ -23,12 +26,10 @@ app.get('/', (req, res) => {
     res.status(300).redirect('/info.html');
 });
 
-app.get('/players', (req, res) => {
+app.get('/players', async (req, res) => {
     try {
-        DBConnection.query('SELECT * FROM players', function (err, result) {
-            if (err) throw err;
-            res.send(result);
-        });
+        const results = await playerRepository.getAllPlayers(pool);
+        res.status(200).send(results);
     } catch (err) {
         res.send(err);
     }
@@ -36,7 +37,7 @@ app.get('/players', (req, res) => {
 
 app.get('/player/:id', async (req, res) => {
     try {
-        const player = query.getPlayerByID(DBConnection, req.params.id);
+        const player = await playerRepository.getPlayerByID(pool, req.params.id);
         res.status(200).send(player);
     } catch (err) {
         console.log(err);
@@ -45,22 +46,16 @@ app.get('/player/:id', async (req, res) => {
 
 app.post('/player/register', async (req, res) => {
     try {
-        // Validation
-        if (!req.body.name || !req.body.password || !req.body.email) throw new Error('Missing arguments.');
+        const name = req.body.name;
+        const email = req.body.email;
+        const password = req.body.password;
+        if (!name || !password || !email) throw new Error('Missing arguments.');
 
-        // Unique name
-        DBConnection.query('SELECT * FROM players WHERE name = ? OR email = ?', [req.body.name, req.body.email], function (err, result) {
-            if (err) console.log('Error: ' + err);
-            if (result) {
-                /*
-                To iterate over a RowDataPacket (result is that datatype), you have to parse the RDP into an array of objects
-                Found here: https://stackoverflow.com/questions/55292615/how-to-loop-data-in-rowdatapacket
-          */
-                result = JSON.parse(JSON.stringify(result));
-                if (result.length != 0) handleDuplicatePlayer(result);
-                else registerPlayer();
-            }
-        });
+        // Check if username or mail are already in use
+        const duplicatePlayer = await playerRepository.isPlayerUnique(pool, name, email);
+        if (duplicatePlayer.length != 0) {
+            handleDuplicatePlayer(duplicatePlayer);
+        } else registerPlayer();
 
         function handleDuplicatePlayer(duplicatePlayer) {
             if (duplicatePlayer[0].name == req.body.name && duplicatePlayer[0].email == req.body.email) {
@@ -86,21 +81,18 @@ app.post('/player/register', async (req, res) => {
             }
         }
 
-        function registerPlayer() {
+        async function registerPlayer() {
             // Hash password
             const salt = bcrypt.genSaltSync(parseInt(process.env.PW_SALT));
             const hashedPassword = bcrypt.hashSync(req.body.password, salt);
 
             // Save to DB
-            const data = {
+            const newPlayer = {
                 name: req.body.name,
                 password: hashedPassword,
                 email: req.body.email,
             };
-
-            DBConnection.query(`INSERT INTO players SET ?`, [data], function (error, results, fields) {
-                if (error) throw error;
-            });
+            await playerRepository.savePlayer(pool, newPlayer);
             // Send success message back
             res.status(200).send('Player created');
         }
@@ -129,14 +121,9 @@ app.post('/login', async (req, res) => {
         if (validation.status != 200) return res.status(validation.status).send({ status: validation.status, message: validation.message });
 
         // GET PLAYER BY NAME OR EMAIL
-        DBConnection.query(
-            `SELECT * FROM players WHERE name = ? OR email = ?`,
-            [validation.args.get('name'), validation.args.get('email')],
-            function (err, result) {
-                if (err) console.log(err);
-                if (result) comparePassword(result);
-            },
-        );
+
+        const player = await playerRepository.getPlayerByNameOrEmail(pool, req.body.name, req.body.email);
+        comparePassword(player);
 
         function comparePassword(result) {
             if (bcrypt.compareSync(validation.args.get('password'), result[0].password))
@@ -165,7 +152,7 @@ app.post('/lobby', async (req, res) => {
             invite_code: createRandomInviteCode(6),
         };
 
-        DBConnection.query('INSERT INTO lobbies SET ?', lobby, (err) => {
+        pool.query('INSERT INTO lobbies SET ?', lobby, (err) => {
             if (err) console.log(err);
         });
 
@@ -177,10 +164,8 @@ app.post('/lobby', async (req, res) => {
 
 app.get('/lobby/:code', async (req, res) => {
     try {
-        DBConnection.query('SELECT * FROM lobbies WHERE invite_code = ?', req.params.code, (err, result) => {
-            if (err) console.log(err);
-            res.send(result);
-        });
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.code);
+        res.send(lobby);
     } catch (err) {
         console.log(err);
     }
@@ -191,23 +176,26 @@ app.post('/lobby/:code', async (req, res) => {
         // TODO: ADD SAFETY METHOD SO A PLAYER CANT JOIN SAME LOBBY TWICE
 
         // Find lobby to join based off invite code
-        const lobby = query.getLobbyByInviteCode(DBConnection, req.params.code);
-        const lobby_id = lobby.id;
-        if (lobby.player_count == lobby.player_limit) {
-            return console.log('Lobby is full');
-        }
-        DBConnection.query(`UPDATE lobbies SET player_count = ${lobby.player_count + 1}`);
-        // Find player based of ID
-        const player = query.getPlayerByID(DBConnection, req.body.player_id);
-        const player_id = player.id;
-        assignPlayerToLobby(player_id, lobby_id);
-        // assign player name to lobby id in seperate table (many to many)
-        function assignPlayerToLobby(p_id, l_id) {
-            DBConnection.query(`INSERT INTO players_lobbies (players_id, lobbies_id) VALUES (${p_id},${l_id})`, (err) => {
-                if (err) console.log(err);
-            });
-        }
-        res.send(`${player.name} joined lobby "${lobby.invite_code}"`);
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.code);
+        console.log(lobby);
+        // const lobby_id = lobby.id;
+        // if (lobby.player_count == lobby.player_limit) {
+        //     return console.log('Lobby is full');
+        // }
+        // pool.query(`UPDATE lobbies SET player_count = ${lobby.player_count + 1}`);
+        // // Find player based of ID
+        // const player = playerRepository.getPlayerByID(pool, req.body.player_id);
+        // console.log(player);
+        // const player_id = player.id;
+        // assignPlayerToLobby(player_id, lobby_id);
+        // // assign player name to lobby id in seperate table (many to many)
+        // function assignPlayerToLobby(p_id, l_id) {
+        //     pool.query(`INSERT INTO players_lobbies (players_id, lobbies_id) VALUES (${p_id},${l_id})`, (err) => {
+        //         if (err) console.log(err);
+        //     });
+        // }
+        // res.send(`${player.name} joined lobby "${lobby.invite_code}"`);
+        res.send('ok');
     } catch (err) {
         console.log(err);
     }
