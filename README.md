@@ -22,6 +22,12 @@ DB_NAME=iotai_db
 PW_SALT=9
 ```
 
+### **Render URL**
+
+<hr>
+
+Backend is being hosted on a free to use service called [Render](https://render.com/). The link used to access our backend is: https://iotai-backend.onrender.com/
+
 <p align='center'>
 <br>
 &copy; IOTAI - 2023
