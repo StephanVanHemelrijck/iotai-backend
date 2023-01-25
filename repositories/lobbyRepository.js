@@ -24,6 +24,22 @@ const lobbyRepository = {
         const isPlayerInLobby = await pool.query('SELECT * FROM players_lobbies WHERE players_id = ? AND lobbies_id = ?', [player[0].id, lobby[0].id]);
         return isPlayerInLobby[0];
     },
+    getAllPlayersInLobby: async function (pool, lobby) {
+        const allPlayersInLobby = await pool.query('SELECT * FROM players_lobbies INNER JOIN players ON players_id = id WHERE lobbies_id = ?;', [lobby.id]);
+        let players = [];
+        allPlayersInLobby[0].forEach((player) => {
+            const playerObject = {
+                players_id: player.players_id,
+                lobbies_id: lobby.id,
+                name: player.name,
+                email: player.email,
+                wins: player.wins,
+                played_games: player.played_games,
+            };
+            players.push(playerObject);
+        });
+        return players;
+    },
 };
 
 module.exports = lobbyRepository;

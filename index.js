@@ -12,6 +12,7 @@ const validator = require('./HelperFunctions/validation.js');
 // Repositories
 const playerRepository = require('./repositories/playerRepository.js');
 const lobbyRepository = require('./repositories/lobbyRepository.js');
+const statRepository = require('./repositories/statsRepository.js');
 
 // Express APP
 const app = express();
@@ -263,6 +264,51 @@ app.post('/lobby/:code/join', async (req, res) => {
     } catch (err) {
         console.log(err);
     }
+});
+
+/**
+ * Endpoint that starts the lobby
+ *
+ * @params lobbyID
+ *
+ */
+app.post('/lobby/:lobbyIC/start', async (req, res) => {
+    // TODO: prevent lobby from starting more than once
+
+    // Get lobby by id
+    const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobbyIC);
+    if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+    const players = await lobbyRepository.getAllPlayersInLobby(pool, lobby[0]);
+
+    // Generate roles 1 predator and 4 scientist per 5 players
+    let amountOfPredators = lobby[0].player_count > 5 ? Math.floor(lobby[0].player_count / 5) : 1;
+    let assignedPredators = 0;
+
+    const newPlayers = players.map((player) => {
+        return {
+            players_id: player.players_id,
+            lobbies_id: player.lobbies_id,
+            role_id: 0,
+        };
+    });
+
+    do {
+        // Random number between rage of 0 and player count
+        const number = Math.ceil(Math.random() * (players.length - 1) + 0);
+        if (newPlayers[number].role_id == 1) break;
+        newPlayers[number].role_id = 1;
+        assignedPredators++;
+    } while (amountOfPredators != assignedPredators);
+
+    // Prep VALUE string for query
+    let values = '';
+    newPlayers.forEach((player, index) => {
+        values += `(${player.players_id},${player.lobbies_id},${player.role_id})`;
+        if (index == players.length - 1) values += ';';
+        else values += ',';
+    });
+    await statRepository.addPlayersFromLobbyInStats(pool, values);
+    res.status(200).send(newPlayers);
 });
 
 // Change string based on deployment environment
