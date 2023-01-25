@@ -121,7 +121,6 @@ app.post('/login', async (req, res) => {
         if (validation.status != 200) return res.status(validation.status).send({ status: validation.status, message: validation.message });
 
         // GET PLAYER BY NAME OR EMAIL
-
         const player = await playerRepository.getPlayerByNameOrEmail(pool, req.body.name, req.body.email);
         comparePassword(player);
 
@@ -135,26 +134,38 @@ app.post('/login', async (req, res) => {
     }
 });
 
+app.get('/lobbies', async (req, res) => {
+    try {
+        const lobbies = await lobbyRepository.getAllLobbies(pool);
+        res.status(200).send(lobbies);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
 app.post('/lobby', async (req, res) => {
     try {
-        function createRandomInviteCode(length) {
+        async function createRandomInviteCode(length) {
             let randomInviteCode = '';
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            for (let i = 0; i < length; i++) {
-                randomInviteCode += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
+            let duplicateLobby;
+            // CHECK FOR DUPLICATE INVITE CODE
+            do {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                for (let i = 0; i < length; i++) {
+                    randomInviteCode += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                duplicateLobby = await lobbyRepository.getLobbyByInviteCode(pool, randomInviteCode);
+            } while (duplicateLobby.length != 0);
             return randomInviteCode;
         }
 
         const lobby = {
             player_limit: 15,
             duration: 90,
-            invite_code: createRandomInviteCode(6),
+            invite_code: await createRandomInviteCode(6),
         };
 
-        pool.query('INSERT INTO lobbies SET ?', lobby, (err) => {
-            if (err) console.log(err);
-        });
+        await lobbyRepository.saveLobby(pool, lobby);
 
         res.status(200).send(lobby);
     } catch (err) {
@@ -171,31 +182,33 @@ app.get('/lobby/:code', async (req, res) => {
     }
 });
 
-app.post('/lobby/:code', async (req, res) => {
+app.post('/lobby/:code/join', async (req, res) => {
     try {
-        // TODO: ADD SAFETY METHOD SO A PLAYER CANT JOIN SAME LOBBY TWICE
-
         // Find lobby to join based off invite code
         const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.code);
-        console.log(lobby);
-        // const lobby_id = lobby.id;
-        // if (lobby.player_count == lobby.player_limit) {
-        //     return console.log('Lobby is full');
-        // }
-        // pool.query(`UPDATE lobbies SET player_count = ${lobby.player_count + 1}`);
-        // // Find player based of ID
-        // const player = playerRepository.getPlayerByID(pool, req.body.player_id);
-        // console.log(player);
-        // const player_id = player.id;
-        // assignPlayerToLobby(player_id, lobby_id);
-        // // assign player name to lobby id in seperate table (many to many)
-        // function assignPlayerToLobby(p_id, l_id) {
-        //     pool.query(`INSERT INTO players_lobbies (players_id, lobbies_id) VALUES (${p_id},${l_id})`, (err) => {
-        //         if (err) console.log(err);
-        //     });
-        // }
-        // res.send(`${player.name} joined lobby "${lobby.invite_code}"`);
-        res.send('ok');
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        // Check if player exists
+        const player = await playerRepository.getPlayerByID(pool, req.body.player_id);
+        if (player.length == 0) return res.status(400).send({ status: 400, message: 'Player does not exist' });
+
+        // Prevent joining full lobby
+        if (lobby[0].player_count == lobby[0].player_limit) return console.log('Lobby is full');
+
+        // Check for double entries
+        //      => Player cannot join lobby if they're already in lobby
+        const isPlayerInLobby = await lobbyRepository.isPlayerInLobby(pool, player, lobby);
+        if (isPlayerInLobby.length != 0) return res.status(400).send({ status: 400, message: `${player[0].name} is already in lobby ${lobby[0].invite_code}` });
+
+        await joinLobby(player, lobby);
+
+        // UPDATE LOBBY PLAYER COUNT
+        async function joinLobby(player, lobby) {
+            await lobbyRepository.updatePlayerCount(pool, lobby);
+            await lobbyRepository.assignPlayerToLobby(pool, player, lobby);
+        }
+
+        res.status(200).send({ status: 200, message: `${player[0].name} joined lobby "${lobby[0].invite_code}"` });
     } catch (err) {
         console.log(err);
     }

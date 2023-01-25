@@ -4,7 +4,7 @@ const playerRepository = {
         return players[0];
     },
     getPlayerByID: async function (pool, id) {
-        const player = await pool.query('SELECT * FROM players WHERE id = ? LIMIT 1', id);
+        const player = await pool.query('SELECT * FROM players WHERE id = ? LIMIT 1', [id]);
         return player[0];
     },
     getPlayerByNameOrEmail: async function (pool, name, email) {
