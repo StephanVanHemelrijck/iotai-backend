@@ -26,6 +26,11 @@ app.get('/', (req, res) => {
     res.status(300).redirect('/info.html');
 });
 
+/**
+ *  End point that returns all players
+ *
+ * @returns players - list of all players
+ */
 app.get('/players', async (req, res) => {
     try {
         const results = await playerRepository.getAllPlayers(pool);
@@ -35,6 +40,12 @@ app.get('/players', async (req, res) => {
     }
 });
 
+/**
+ *  Endpoint that returns a specific player by their ID
+ *
+ * @params id
+ * @returns player
+ */
 app.get('/player/:id', async (req, res) => {
     try {
         const player = await playerRepository.getPlayerByID(pool, req.params.id);
@@ -43,7 +54,14 @@ app.get('/player/:id', async (req, res) => {
         console.log(err);
     }
 });
-
+/**
+ *  Endpoint that allows you to register a new player
+ *
+ * @body name - desired nickname, doesn't have to be real name
+ * @body email
+ * @body password
+ * @returns success_message
+ */
 app.post('/player/register', async (req, res) => {
     try {
         const name = req.body.name;
@@ -94,13 +112,24 @@ app.post('/player/register', async (req, res) => {
             };
             await playerRepository.savePlayer(pool, newPlayer);
             // Send success message back
-            res.status(200).send('Player created');
+            res.status(200).send({ status: 200, message: 'Player created.' });
         }
     } catch (err) {
         res.send(err);
     }
 });
 
+/**
+ *  Endpoint that logins the player in.
+ *
+ * @body name - optional*
+ * @body email - optional*
+ * @body password
+ * @returns player
+ *
+ * *optional: Only one of the above is required, either name or email, not both.
+ *
+ */
 app.post('/login', async (req, res) => {
     try {
         // Prep map (Key => Value)
@@ -134,6 +163,12 @@ app.post('/login', async (req, res) => {
     }
 });
 
+/**
+ *  Endpoint that returns all lobbies
+ *
+ * @returns lobbies - list of all lobbies
+ */
+
 app.get('/lobbies', async (req, res) => {
     try {
         const lobbies = await lobbyRepository.getAllLobbies(pool);
@@ -143,6 +178,11 @@ app.get('/lobbies', async (req, res) => {
     }
 });
 
+/**
+ *  Endpoint that creates a new lobby
+ *
+ * @returns lobby
+ */
 app.post('/lobby', async (req, res) => {
     try {
         async function createRandomInviteCode(length) {
@@ -173,6 +213,11 @@ app.post('/lobby', async (req, res) => {
     }
 });
 
+/**
+ * Endpoint that returns a certain lobby based on their invite code
+ *
+ * @params code - Lobby's invite code
+ */
 app.get('/lobby/:code', async (req, res) => {
     try {
         const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.code);
@@ -182,6 +227,12 @@ app.get('/lobby/:code', async (req, res) => {
     }
 });
 
+/**
+ *  Endpoint that lets a player join a certain lobby
+ *
+ * @params code - Lobby's invite code
+ * @body player_id
+ */
 app.post('/lobby/:code/join', async (req, res) => {
     try {
         // Find lobby to join based off invite code
