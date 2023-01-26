@@ -17,6 +17,9 @@ const lobbyRepository = {
     updatePlayerCount: async function (pool, lobby) {
         const updateLobby = await pool.query('UPDATE lobbies SET player_count = ? WHERE id = ?', [lobby[0].player_count + 1, lobby[0].id]);
     },
+    updateStartedState: async function (pool, started, lobby) {
+        const updateLobby = await pool.query('UPDATE lobbies SET started = ? WHERE id = ?', [!lobby.started, lobby.id]);
+    },
     assignPlayerToLobby: async function (pool, player, lobby) {
         const assignPlayerToLobby = await pool.query('INSERT INTO players_lobbies (players_id,lobbies_id) VALUES (?, ?)', [player[0].id, lobby[0].id]);
     },
@@ -35,6 +38,7 @@ const lobbyRepository = {
                 email: player.email,
                 wins: player.wins,
                 played_games: player.played_games,
+                avatar: player.avatar,
             };
             players.push(playerObject);
         });
