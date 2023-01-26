@@ -13,6 +13,7 @@ const validator = require('./HelperFunctions/validation.js');
 const playerRepository = require('./repositories/playerRepository.js');
 const lobbyRepository = require('./repositories/lobbyRepository.js');
 const statRepository = require('./repositories/statsRepository.js');
+const roleRepository = require('./repositories/roleRepository.js');
 
 // Express APP
 const app = express();
@@ -222,7 +223,12 @@ app.post('/lobby', async (req, res) => {
 app.get('/lobby/:code', async (req, res) => {
     try {
         const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.code);
-        res.send(lobby);
+        // Get players in lobby
+        const players = await lobbyRepository.getAllPlayersInLobby(pool, lobby[0]);
+
+        lobby[0].players = players;
+
+        res.send(lobby[0]);
     } catch (err) {
         console.log(err);
     }
@@ -245,7 +251,7 @@ app.post('/lobby/:code/join', async (req, res) => {
         if (player.length == 0) return res.status(400).send({ status: 400, message: 'Player does not exist' });
 
         // Prevent joining full lobby
-        if (lobby[0].player_count == lobby[0].player_limit) return console.log('Lobby is full');
+        if (lobby[0].player_count == lobby[0].player_limit) return res.status(400).send({ status: 400, message: 'Lobby is full' });
 
         // Check for double entries
         //      => Player cannot join lobby if they're already in lobby
@@ -288,15 +294,15 @@ app.post('/lobby/:lobbyIC/start', async (req, res) => {
         return {
             players_id: player.players_id,
             lobbies_id: player.lobbies_id,
-            role_id: 0,
+            role_id: 1,
         };
     });
 
     do {
         // Random number between rage of 0 and player count
         const number = Math.ceil(Math.random() * (players.length - 1) + 0);
-        if (newPlayers[number].role_id == 1) break;
-        newPlayers[number].role_id = 1;
+        if (newPlayers[number].role_id == 2) break;
+        newPlayers[number].role_id = 2;
         assignedPredators++;
     } while (amountOfPredators != assignedPredators);
 
@@ -308,7 +314,43 @@ app.post('/lobby/:lobbyIC/start', async (req, res) => {
         else values += ',';
     });
     await statRepository.addPlayersFromLobbyInStats(pool, values);
+
+    // Update lobby to start state
+    //  => 1 // TRUE
+    //  => 0 // FALSE
+    lobbyRepository.updateStartedState(pool, 1, lobby[0]);
+
     res.status(200).send(newPlayers);
+});
+
+app.get('/roles', async (req, res) => {
+    try {
+        const roles = await roleRepository.getAllRoles(pool);
+        res.status(200).send(roles);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.get('/role/:id', async (req, res) => {
+    try {
+        if (!req.params.id) return res.status(400).send({ status: 400, message: 'No ID given' });
+        const role = await roleRepository.getRoleById(pool, req.params.id);
+        if (!role) return res.status(400).send({ status: 400, message: 'Role not found' });
+        res.status(200).send(role);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.get('/role/:lobbyID/:playerID', async (req, res) => {
+    try {
+        const playerRole = await statRepository.getStatFromPlayerByIdInLobby(pool, req.params.playerID, req.params.lobbyID);
+        const role = await roleRepository.getRoleById(pool, playerRole[0].role_id);
+        res.status(200).send(role);
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 // Change string based on deployment environment
