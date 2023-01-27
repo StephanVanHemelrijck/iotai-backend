@@ -50,13 +50,13 @@ This project is compatible with the following versions:
 Paste the following command in to your terminal of choice, to clone the repository on to your device
 
 ```
-gh repo clone EHB-MCT/full-projects-3-iotai
+gh repo clone StephanVanHemelrijck/iotai-backend
 ```
 
 Or use the GitHub Desktop client to clone the repository that way using the following link
 
 ```
-https://github.com/EHB-MCT/full-projects-3-iotai.git
+https://github.com/StephanVanHemelrijck/iotai-backend.git
 ```
 
 ### **Before running the code**
