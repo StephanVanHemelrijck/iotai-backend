@@ -42,19 +42,19 @@ CREATE TABLE roles(
 );
 
 INSERT INTO players (name, password, email, wins, played_games,avatar)
-    VALUES ('Stephan', 'iotai123', 'myemail@outlook.com', '5', '12','tree-g');
+    VALUES ('Stephan', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '5', '12','tree-g');
 INSERT INTO players (name, password, email, wins, played_games,avatar)
-    VALUES ('Rachelle', 'iotai123', 'myemail@outlook.com', '2', '4','waterlily-g');
+    VALUES ('Rachelle', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '2', '4','waterlily-g');
 INSERT INTO players (name, password, email, wins, played_games,avatar)
-    VALUES ('Ryan', 'iotai123', 'myemail@outlook.com', '3', '14','t-rex-g');
+    VALUES ('Ryan', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '3', '14','t-rex-g');
 INSERT INTO players (name, password, email, wins, played_games,avatar)
-    VALUES ('Yoran', 'iotai123', 'myemail@outlook.com', '2', '7','diplodocus-g');
+    VALUES ('Yoran', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '2', '7','diplodocus-g');
 INSERT INTO players (name, password, email, wins, played_games,avatar)
-    VALUES ('Lili', 'iotai123', 'myemail@outlook.com', '2', '7','quartz-g');
+    VALUES ('Lili', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '2', '7','quartz-g');
 INSERT INTO players (name, password, email, wins, played_games,avatar)
-    VALUES ('Nawfal', 'iotai123', 'myemail@outlook.com', '2', '7','diamond-g');
+    VALUES ('Nawfal', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '2', '7','diamond-g');
 INSERT INTO players (name, password, email, wins, played_games,avatar)
-    VALUES ('Cedric', 'iotai123', 'myemail@outlook.com', '2', '7','baby-g');
+    VALUES ('Cedric', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '2', '7','baby-g');
     
 INSERT INTO lobbies (player_limit, duration, invite_code,player_count,started,ended)
 	VALUES (15,90,'GNHNTR',6,false,false);
