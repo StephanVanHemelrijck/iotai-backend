@@ -121,6 +121,15 @@ app.post('/player/register', async (req, res) => {
     }
 });
 
+app.put('/player/avatar/update', async (req, res) => {
+    try {
+        const updateAvatar = await playerRepository.updateAvatar(pool, req.body.avatar, req.body.player_id);
+        res.status(200).send('OK');
+    } catch (err) {
+        console.log(err);
+    }
+});
+
 /**
  *  Endpoint that logins the player in.
  *
