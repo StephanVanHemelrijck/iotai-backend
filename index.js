@@ -153,11 +153,18 @@ app.post('/login', async (req, res) => {
 
         // GET PLAYER BY NAME OR EMAIL
         const player = await playerRepository.getPlayerByNameOrEmail(pool, req.body.name, req.body.email);
+        if (player.length == 0) return res.status(400).send({ status: 400, message: 'Account does not exist.' });
         comparePassword(player);
 
         function comparePassword(result) {
             if (bcrypt.compareSync(validation.args.get('password'), result[0].password))
-                return res.status(200).send({ name: result[0].name, email: result[0].email, wins: result[0].wins, played_games: result[0].played_games });
+                return res.status(200).send({
+                    id: result[0].id,
+                    name: result[0].name,
+                    email: result[0].email,
+                    wins: result[0].wins,
+                    played_games: result[0].played_games,
+                });
             else return res.status(200).send({ status: 400, message: 'Wrong password.' });
         }
     } catch (err) {
