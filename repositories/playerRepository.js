@@ -18,6 +18,9 @@ const playerRepository = {
     savePlayer: async function (pool, player) {
         const savePlayer = await pool.query('INSERT INTO players SET ?', [player]);
     },
+    updateAvatar: async function (pool, avatar, player_id) {
+        const updateAvatar = await pool.query('UPDATE players SET avatar = ? WHERE id = ?', [avatar, player_id]);
+    },
 };
 
 module.exports = playerRepository;

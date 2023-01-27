@@ -13,6 +13,7 @@ const validator = require('./HelperFunctions/validation.js');
 const playerRepository = require('./repositories/playerRepository.js');
 const lobbyRepository = require('./repositories/lobbyRepository.js');
 const statRepository = require('./repositories/statsRepository.js');
+const { updateAvatar } = require('./repositories/playerRepository.js');
 
 // Express APP
 const app = express();
@@ -117,6 +118,17 @@ app.post('/player/register', async (req, res) => {
         }
     } catch (err) {
         res.send(err);
+    }
+});
+
+app.put('/player/avatar/update', async (req, res) => {
+    try {
+        console.log(req.body.player_id);
+        const updateAvatar = await playerRepository.updateAvatar(pool, req.body.avatar, req.body.player_id);
+        console.log(req.body.avatar);
+        res.status(200).send('OK');
+    } catch (err) {
+        console.log(err);
     }
 });
 
