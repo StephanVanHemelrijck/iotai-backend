@@ -114,7 +114,7 @@ app.post('/player/register', async (req, res) => {
             };
             await playerRepository.savePlayer(pool, newPlayer);
             // Send success message back
-            res.status(200).send({ status: 200, message: 'Player created.' });
+            res.status(200).send({ status: 200, message: 'Player created.', registered_player: newPlayer });
         }
     } catch (err) {
         res.send(err);
