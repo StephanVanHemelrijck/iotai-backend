@@ -14,6 +14,7 @@ const playerRepository = require('./repositories/playerRepository.js');
 const lobbyRepository = require('./repositories/lobbyRepository.js');
 const statRepository = require('./repositories/statsRepository.js');
 const roleRepository = require('./repositories/roleRepository.js');
+const taskRepository = require('./repositories/taskRepository.js');
 
 // Express APP
 const app = express();
@@ -56,6 +57,7 @@ app.get('/player/:id', async (req, res) => {
         console.log(err);
     }
 });
+
 /**
  *  Endpoint that allows you to register a new player
  *
@@ -111,6 +113,7 @@ app.post('/player/register', async (req, res) => {
                 name: req.body.name,
                 password: hashedPassword,
                 email: req.body.email,
+                avatar: 'waterlily-g', // Default avatar
             };
             await playerRepository.savePlayer(pool, newPlayer);
             // Send success message back
@@ -121,6 +124,13 @@ app.post('/player/register', async (req, res) => {
     }
 });
 
+/**
+ * Endpoint that updates the player's avatar
+ *
+ * @body avatar - avatar name without mime type
+ * @body player_id - id of player
+ * @returns OK
+ */
 app.put('/player/avatar/update', async (req, res) => {
     try {
         const updateAvatar = await playerRepository.updateAvatar(pool, req.body.avatar, req.body.player_id);
@@ -186,7 +196,6 @@ app.post('/login', async (req, res) => {
  *
  * @returns lobbies - list of all lobbies
  */
-
 app.get('/lobbies', async (req, res) => {
     try {
         const lobbies = await lobbyRepository.getAllLobbies(pool);
@@ -364,6 +373,138 @@ app.get('/role/:lobbyID/:playerID', async (req, res) => {
         const playerRole = await statRepository.getStatFromPlayerByIdInLobby(pool, req.params.playerID, req.params.lobbyID);
         const role = await roleRepository.getRoleById(pool, playerRole[0].role_id);
         res.status(200).send(role);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ *  Endpoint that  returns all tasks stored in the database
+ *
+ * @returns tasks
+ */
+app.get('/tasks', async (req, res) => {
+    try {
+        const tasks = await taskRepository.getAllTasks(pool);
+        if (tasks.length == 0) return res.status(400).send({ status: 400, message: 'There are currently no tasks stored in the database.' });
+        res.status(200).send(tasks);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ *  Endpoint that returns a certain task based on the id given.
+ *
+ * @params id - task id
+ */
+app.get('/task/:id', async (req, res) => {
+    try {
+        const task = await taskRepository.getTaskById(pool, req.params.id);
+        if (task.length == 0) return res.status(400).send({ status: 400, message: `Task with id ${req.params.id} not found.` });
+        res.status(200).send(task[0]);
+    } catch (err) {
+        console.log(res);
+    }
+});
+
+/**
+ *  Endpoint that creates a new task
+ *
+ * @body name - task name (has to be unique)
+ * @body description - task description
+ *
+ * @returns task - returns created task
+ */
+app.post('/task', async (req, res) => {
+    try {
+        // Validation for user input
+        const map = new Map();
+        map.set('name', req.body.name);
+        map.set('description', req.body.description);
+
+        const validation = validator.validateUserInput(map);
+        if (validation.status == 400) return res.status(validation.status).send({ status: validation.status, message: validation.message });
+
+        // Check if task with given name already exists
+        const duplicateTask = await taskRepository.getTaskByName(pool, req.body.name);
+        if (duplicateTask.length != 0) return res.status(400).send({ status: 400, message: `Task with name ${req.body.name} already exists.` });
+
+        // Create task
+        const newTask = { name: req.body.name, description: req.body.description };
+
+        // Save task to DB
+        const saveTask = await taskRepository.saveTask(pool, newTask);
+
+        res.status(200).send(newTask);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ * Endpoint that deletes certain task based on given name OR id
+ *
+ * @body name - Optional*
+ * @body id - Optional*
+ *
+ * @returns message - Says if deletion was successful or not
+ *
+ * *Optional: One of the parameters is required, or both can be given but name has priority.
+ */
+app.delete('/task', async (req, res) => {
+    try {
+        if (!req.body.id && !req.body.name) {
+            return res.status(400).send({ status: 400, message: 'Please provide either id or name.' });
+        } else if (req.body.name) {
+            const task = await taskRepository.getTaskByName(pool, req.body.name);
+            if (task.length == 0) return res.status(400).send({ status: 400, message: `Task with name ${req.body.name} doesn't exist` });
+            const deletedTask = await taskRepository.deleteTaskByName(pool, req.body.name);
+            return res.status(200).send({ status: 200, message: `Task with name ${req.body.name} successfully deleted.` });
+        } else if (req.body.id) {
+            const task = await taskRepository.getTaskById(pool, req.body.id);
+            if (task.length == 0) return res.status(400).send({ status: 400, message: `Task with id ${req.body.id} doesn't exist` });
+            const deletedTask = await taskRepository.deleteTaskById(pool, req.body.id);
+            return res.status(200).send({ status: 200, message: `Task with id ${req.body.id} successfully deleted.` });
+        }
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ * Endpoint that updates a task identified by id
+ *
+ * @params id
+ *
+ * Body parameters only required if they are meant to be updated.
+ * @body name - name to update to
+ * @body description - description u want to update to
+ *
+ * @returns message - Success message with the updated task
+ *
+ */
+app.put('/task/:id', async (req, res) => {
+    try {
+        const map = new Map();
+        map.set('name', req.body.name);
+        map.set('description', req.body.description);
+        const validation = validator.validateUserInput(map);
+
+        // Get task by id
+        const task = await taskRepository.getTaskById(pool, req.params.id);
+        if (task.length == 0) return res.status(400).send({ status: 400, message: `Task with id ${req.params.id} does not exist` });
+
+        // Assign values
+        const name = req.body.name == undefined || req.body.name == '' ? task[0].name : req.body.name;
+        const description = req.body.description == undefined || req.body.description == '' ? task[0].description : req.body.description;
+
+        // Create updated task
+        const updatedTask = { name, description, id: req.params.id };
+
+        await taskRepository.updateTask(pool, updatedTask);
+
+        return res.status(200).send({ status: 200, message: `Task with id ${req.params.id} successfully updated.`, updated_task: updatedTask });
     } catch (err) {
         console.log(err);
     }
