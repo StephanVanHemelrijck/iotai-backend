@@ -113,6 +113,7 @@ app.post('/player/register', async (req, res) => {
                 name: req.body.name,
                 password: hashedPassword,
                 email: req.body.email,
+                avatar: 'waterlily-g', // Default avatar
             };
             await playerRepository.savePlayer(pool, newPlayer);
             // Send success message back
