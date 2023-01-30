@@ -116,8 +116,9 @@ app.post('/player/register', async (req, res) => {
                 avatar: 'waterlily-g', // Default avatar
             };
             await playerRepository.savePlayer(pool, newPlayer);
+            const player = await playerRepository.getPlayerByNameOrEmail(pool, newPlayer.name, newPlayer.email);
             // Send success message back
-            res.status(200).send({ status: 200, message: 'Player created.', registered_player: newPlayer });
+            res.status(200).send({ status: 200, message: 'Player created.', player: player[0] });
         }
     } catch (err) {
         res.send(err);
