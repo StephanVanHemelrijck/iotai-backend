@@ -18,7 +18,10 @@ const lobbyRepository = {
         const updateLobby = await pool.query('UPDATE lobbies SET player_count = ? WHERE id = ?', [lobby[0].player_count + 1, lobby[0].id]);
     },
     updateStartedState: async function (pool, started, lobby) {
-        const updateLobby = await pool.query('UPDATE lobbies SET started = ? WHERE id = ?', [!lobby.started, lobby.id]);
+        const updateLobby = await pool.query('UPDATE lobbies SET started = ? WHERE id = ?', [started, lobby.id]);
+    },
+    updateEndedState: async function (pool, ended, lobby) {
+        const updateLobby = await pool.query('UPDATE lobbies SET ended = ? WHERE id = ?', [ended, lobby.id]);
     },
     assignPlayerToLobby: async function (pool, player, lobby) {
         const assignPlayerToLobby = await pool.query('INSERT INTO players_lobbies (players_id,lobbies_id) VALUES (?, ?)', [player[0].id, lobby[0].id]);

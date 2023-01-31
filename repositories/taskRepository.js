@@ -27,7 +27,14 @@ const taskRepository = {
         const task = await pool.query('SELECT * FROM tasks WHERE name = ?', [task_name]);
         return task[0];
     },
-    assignTasksToPlayer: async function (pool, player_id, amount) {},
+    assignTasksToPlayer: async function (pool, player_id, lobby_id, tasks) {
+        let actualTasks = [];
+        for (i = 0; i < tasks.length; i++) {
+            const actualTask = await this.getTaskById(pool, tasks[i] + 1);
+            actualTasks.push(actualTask[0]);
+        }
+        return actualTasks;
+    },
 };
 
 module.exports = taskRepository;

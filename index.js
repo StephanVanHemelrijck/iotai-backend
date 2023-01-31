@@ -15,6 +15,7 @@ const lobbyRepository = require('./repositories/lobbyRepository.js');
 const statRepository = require('./repositories/statsRepository.js');
 const roleRepository = require('./repositories/roleRepository.js');
 const taskRepository = require('./repositories/taskRepository.js');
+const { log } = require('console');
 
 // Express APP
 const app = express();
@@ -321,6 +322,7 @@ app.post('/lobby/:lobbyIC/start', async (req, res) => {
             players_id: player.players_id,
             lobbies_id: player.lobbies_id,
             role_id: 1,
+            isAlive: 1,
         };
     });
 
@@ -335,7 +337,7 @@ app.post('/lobby/:lobbyIC/start', async (req, res) => {
     // Prep VALUE string for query
     let values = '';
     newPlayers.forEach((player, index) => {
-        values += `(${player.players_id},${player.lobbies_id},${player.role_id})`;
+        values += `(${player.players_id},${player.lobbies_id},${player.role_id},1)`;
         if (index == players.length - 1) values += ';';
         else values += ',';
     });
@@ -347,6 +349,62 @@ app.post('/lobby/:lobbyIC/start', async (req, res) => {
     lobbyRepository.updateStartedState(pool, 1, lobby[0]);
 
     res.status(200).send(newPlayers);
+});
+
+/**
+ * Endpoint that checks if there is a winning party and if so ends the lobby and returns
+ * a list of the winners
+ *
+ * @params lobbyIC - lobby invite code
+ *
+ * @returns winners - list of winners
+ */
+app.post('/lobby/:lobbyIC/end-check', async (req, res) => {
+    try {
+        // Get lobby by id
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobbyIC);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        // Get players alive -> role with most people alive wins
+        const alivePredators = await statRepository.getAlivePredatorsInLobby(pool, lobby[0]);
+        const aliveScientists = await statRepository.getAliveScientistsInLobby(pool, lobby[0]);
+        let endObj = {
+            ended: 0,
+            role: '',
+            winners: [],
+        };
+        // Decide winners
+        // Predators win if there are just as many scientists as predators alive
+        if (alivePredators[0].length == aliveScientists[0].length) {
+            const predators = await statRepository.getPredatorsInLobby(pool, lobby[0]);
+            for (i = 0; i < predators[0].length; i++) {
+                const predatorObj = await playerRepository.getPlayerByID(pool, predators[0][i].player_id);
+                endObj.winners.push(predatorObj[0]);
+            }
+            endObj.role = 'Predators';
+        }
+        // TODO: Scientists when if all tasks are completed
+
+        // Scientists win when all predators are dead
+        if (alivePredators[0].length == 0) {
+            const scientists = await statRepository.getScientistsInLobby(pool, lobby[0]);
+            for (i = 0; i < scientists[0].length; i++) {
+                const scientistObj = await playerRepository.getPlayerByID(pool, scientists[0][i].player_id);
+                endObj.winners.push(scientistObj[0]);
+            }
+            endObj.role = 'Scientists';
+        }
+
+        // Update lobby has ended state
+        // Boolean =>
+        //  1 = true
+        //  0 = false
+        const ended = endObj.ended;
+        const updateLobby = await lobbyRepository.updateEndedState(pool, ended, lobby[0]);
+        res.send(endObj);
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 app.get('/roles', async (req, res) => {
@@ -506,6 +564,106 @@ app.put('/task/:id', async (req, res) => {
         await taskRepository.updateTask(pool, updatedTask);
 
         return res.status(200).send({ status: 200, message: `Task with id ${req.params.id} successfully updated.`, updated_task: updatedTask });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ * Endpoint to assign a player an X amount of unique tasks in certain lobby
+ *
+ * @body player_id
+ * @body lobby_id
+ * @body amount - amount of tasks to assign
+ *
+ * @return tasks - lists of tasks for player
+ */
+app.post('/tasks/assign', async (req, res) => {
+    try {
+        const player_id = req.body.player_id;
+        const lobby_id = req.body.lobby_id;
+        const amount = req.body.amount;
+        const map = new Map();
+        map.set('player_id', player_id);
+        map.set('lobby_id', lobby_id);
+        map.set('amount', amount);
+        const validation = validator.validateUserInput(map);
+        if (validation.status == 400) return res.status(400).send({ status: validation.status, message: validation.message });
+
+        // Get amount of stored tasks in DB
+        let amountOfTasks = await taskRepository.getAllTasks(pool);
+        amountOfTasks = amountOfTasks.length;
+        if (amount > amountOfTasks)
+            return res.status(400).send({
+                status: 400,
+                message: `There are currently ${amountOfTasks} tasks stored, therefore can't assign more than ${amountOfTasks} tasks to a single player`,
+                tried_to_assign: amount,
+            });
+        // Store indexes in array so we can take out an index whenever its selected
+        const taskIndexes = [];
+        for (i = 0; i <= amountOfTasks - 1; i++) {
+            taskIndexes.push(i);
+        }
+
+        const tasksToAssign = [];
+
+        // => Generate X random indexes between 0 and the length of all tasks - 1
+        for (i = 0; i < amount; i++) {
+            const randomIndex = Math.floor(Math.random() * taskIndexes.length);
+            const randomTask = taskIndexes[randomIndex];
+            tasksToAssign.push(randomTask);
+            taskIndexes.splice(randomIndex, 1);
+        }
+
+        const tasks = await taskRepository.assignTasksToPlayer(pool, player_id, lobby_id, tasksToAssign);
+
+        res.status(200).send(tasks);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ * Endpoint that eliminates a player (eject)
+ *
+ * @body player_id
+ * @body lobby_id
+ *
+ * @returns message
+ *
+ */
+app.put('/player/eject', async (req, res) => {
+    try {
+        const map = new Map();
+        map.set('player_id', req.body.player_id);
+        map.set('lobby_invite_code', req.body.lobby_invite_code);
+        const validation = validator.validateUserInput(map);
+        if (validation.status == 400) return res.status(400).send({ status: validation.status, message: validation.message });
+
+        // Requirements:
+        // Lobby has to exist
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.body.lobby_invite_code);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+        const lobby_id = lobby[0].id;
+
+        // Player has to exist
+        const player = await playerRepository.getPlayerByID(pool, req.body.player_id);
+        if (player.length == 0) return res.status(400).send({ status: 400, message: `Player does not exist` });
+        const player_id = player[0].id;
+
+        // Player has to be in the lobby
+        const isPlayerInLobby = await lobbyRepository.isPlayerInLobby(pool, player, lobby);
+        if (isPlayerInLobby.length == 0) return res.status(400).send({ status: 400, message: `Player is not in lobby '${req.body.lobby_invite_code}'` });
+
+        // Player can not already be ejected
+        if (isPlayerInLobby[0].isAlive == 0) return res.status(400).send({ status: 400, message: 'Player has already been ejected' });
+        // Update player isAlive to false
+        // isAlive boolean =>
+        // 1 => true
+        // 0 => false
+        const isAlive = 0;
+        const updatePlayer = await statRepository.updateIsPlayerAlive(pool, player_id, lobby_id, isAlive);
+        res.status(200).send({ status: 200, message: `Player with id: ${player_id} has been ejected in lobby: '${req.body.lobby_invite_code}'` });
     } catch (err) {
         console.log(err);
     }
