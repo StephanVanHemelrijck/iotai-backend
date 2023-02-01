@@ -312,6 +312,11 @@ app.post('/lobby/:lobbyIC/start', async (req, res) => {
     if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
     const players = await lobbyRepository.getAllPlayersInLobby(pool, lobby[0]);
 
+    players.forEach(async (player) => {
+        console.log(player);
+        await playerRepository.updateGamesPlayed(pool, player);
+    });
+
     // Generate roles 1 predator and 4 scientist per 5 players
     let amountOfPredators = lobby[0].player_count > 5 ? Math.floor(lobby[0].player_count / 5) : 1;
     let assignedPredators = 0;
@@ -391,6 +396,7 @@ app.post('/lobby/:lobbyIC/end-check', async (req, res) => {
             const scientists = await statRepository.getScientistsInLobby(pool, lobby[0]);
             for (i = 0; i < scientists[0].length; i++) {
                 const scientistObj = await playerRepository.getPlayerByID(pool, scientists[0][i].player_id);
+                await updateGlobalWins(pool, scientistObj);
                 endObj.winners.push(scientistObj[0]);
             }
             endObj.ended = 1;
