@@ -32,6 +32,7 @@ CREATE TABLE stats(
 	player_id INT,
     lobby_id INT,
     role_id INT,
+    isAlive BOOLEAN,
     hasWon BOOLEAN
 );
 
@@ -40,6 +41,34 @@ CREATE TABLE roles(
     name VARCHAR(30),
     description VARCHAR(255)
 );
+
+CREATE TABLE tasks(
+	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(60),
+    img VARCHAR(60),
+    description VARCHAR(255),
+    answer VARCHAR(60)
+);
+
+CREATE TABLE players_tasks(	
+	task_id INT,
+    player_id INT,
+    lobby_id INT,
+    isCompleted BOOLEAN
+);
+
+
+
+INSERT INTO tasks (name, description, img, answer)
+	VALUES('Minerals','What mineral is this?', 'mineraal.jpg','Azurite');
+INSERT INTO tasks (name, description, img, answer)
+	VALUES('Magnification glass','What group of hominins do you see when looking through these goggles?','vergrootglas.jpg', 'Australopithecus');
+INSERT INTO tasks (name, description, img, answer)
+	VALUES('Mosasaur','The mosasaur is not a dinosaur. To which group of animals are they related?','mosasaurus.jpg','Snakes');
+INSERT INTO tasks (name, description, img, answer)
+	VALUES('Meteorite','Where did this meteorite fall?','metoriet.jpg','Tintigny');
+INSERT INTO tasks (name, description, img, answer)
+	VALUES('Femur','How much did the dinosaur to which the third femur in the photo belongs weigh in KG?','dijbeen.jpg','563');
 
 INSERT INTO players (name, password, email, wins, played_games,avatar)
     VALUES ('Stephan', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '5', '12','tree-g');
@@ -76,5 +105,3 @@ INSERT INTO roles (name, description)
 	VALUES ('Scientist', 'Complete your tasks and try to find out who the predators are');
 INSERT INTO roles (name, description)
 	VALUES ('Predator', "Eliminate the players and don't get caught");
-
-    

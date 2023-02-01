@@ -126,6 +126,35 @@ app.post('/player/register', async (req, res) => {
 });
 
 /**
+ * Endpoint that allows you to register as a guest
+ *
+ * @body name - desired nickname
+ * @returns message
+ */
+app.post('/guest/register', async (req, res) => {
+    try {
+        let name = req.body.name;
+        const map = new Map();
+        map.set('name', name);
+        const validation = validator.validateUserInput(map);
+        if (validation.status == 400) return res.status(validation.status).send({ status: validation.status, message: validation.message });
+        // Add length of players in DB in number to the name, to prevent duplicate guest names
+        const players = await playerRepository.getAllPlayers(pool);
+        name += players.length;
+
+        const guestPlayer = {
+            name,
+            avatar: 'waterlily-g',
+        };
+        await playerRepository.savePlayer(pool, guestPlayer);
+        const player = await playerRepository.getPlayerByNameOrEmail(pool, guestPlayer.name);
+        res.status(200).send({ status: 200, message: 'Player created.', player: player[0] });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
  * Endpoint that updates the player's avatar
  *
  * @body avatar - avatar name without mime type
