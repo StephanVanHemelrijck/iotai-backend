@@ -15,7 +15,6 @@ const lobbyRepository = require('./repositories/lobbyRepository.js');
 const statRepository = require('./repositories/statsRepository.js');
 const roleRepository = require('./repositories/roleRepository.js');
 const taskRepository = require('./repositories/taskRepository.js');
-const { log } = require('console');
 
 // Express APP
 const app = express();
@@ -610,6 +609,7 @@ app.post('/tasks/assign', async (req, res) => {
         // => Generate X random indexes between 0 and the length of all tasks - 1
         for (i = 0; i < amount; i++) {
             const randomIndex = Math.floor(Math.random() * taskIndexes.length);
+            console.log('Random index: ', randomIndex);
             const randomTask = taskIndexes[randomIndex];
             tasksToAssign.push(randomTask);
             taskIndexes.splice(randomIndex, 1);
@@ -618,6 +618,53 @@ app.post('/tasks/assign', async (req, res) => {
         const tasks = await taskRepository.assignTasksToPlayer(pool, player_id, lobby_id, tasksToAssign);
 
         res.status(200).send(tasks);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ *  Endpoint that allows a player to complete a certain task in their lobby
+ *
+ *
+ */
+app.put('/task/:task_id/complete', async (req, res) => {
+    try {
+        const task_id = req.params.task_id;
+        const player_id = req.body.player_id;
+        const lobby_ic = req.body.lobby_invite_code;
+        const map = new Map();
+        map.set('task_id', task_id);
+        map.set('player_id', player_id);
+        map.set('lobby_ic', lobby_ic);
+        const validation = validator.validateUserInput(map);
+
+        // Validation
+        // Lobby has to exist
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, lobby_ic);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+        // Task has to exist
+        const task = await taskRepository.getTaskById(pool, task_id);
+        if (task.length == 0) return res.status(400).send({ status: 400, message: 'Task does not exist' });
+        // Player has to exist
+        const player = await playerRepository.getPlayerByID(pool, player_id);
+        if (player.length == 0) return res.status(400).send({ status: 400, message: 'Player does not exist' });
+        // Check if player is in lobby
+        const isPlayerInLobby = await lobbyRepository.isPlayerInLobby(pool, player, lobby);
+        if (isPlayerInLobby.length == 0) return res.status(400).send({ status: 400, message: 'Player is not in the lobby' });
+        // Check if player has task
+        const playerHasTask = await taskRepository.taskBelongsToPlayer(pool, player, task, lobby);
+        if (!playerHasTask) return res.status(400).send({ status: 400, message: 'Player does not have this task.' });
+        // Update task to complete
+        const completeTask = await taskRepository.completeTask(pool, task[0], player[0], lobby[0]);
+        // return tasks for player
+        const tasksForPlayer = await taskRepository.getAllTasksForPlayerById(pool, player, lobby);
+
+        res.status(200).send({
+            status: 400,
+            message: `${player[0].name} has completed task "${task[0].name}" in lobby "${lobby[0].invite_code}"`,
+            tasks: tasksForPlayer,
+        });
     } catch (err) {
         console.log(err);
     }
