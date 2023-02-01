@@ -380,17 +380,20 @@ app.post('/lobby/:lobbyIC/end-check', async (req, res) => {
                 const predatorObj = await playerRepository.getPlayerByID(pool, predators[0][i].player_id);
                 endObj.winners.push(predatorObj[0]);
             }
+            endObj.ended = 1;
             endObj.role = 'Predators';
         }
         // TODO: Scientists when if all tasks are completed
+        const unfinishedTasksInLobby = await taskRepository.getAllUnfinishedTasksInLobby(pool, lobby);
 
-        // Scientists win when all predators are dead
-        if (alivePredators[0].length == 0) {
+        // Scientists win when all predators are dead || all tasks completed
+        if (alivePredators[0].length == 0 || unfinishedTasksInLobby.length == 0) {
             const scientists = await statRepository.getScientistsInLobby(pool, lobby[0]);
             for (i = 0; i < scientists[0].length; i++) {
                 const scientistObj = await playerRepository.getPlayerByID(pool, scientists[0][i].player_id);
                 endObj.winners.push(scientistObj[0]);
             }
+            endObj.ended = 1;
             endObj.role = 'Scientists';
         }
 

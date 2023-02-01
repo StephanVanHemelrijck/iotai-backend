@@ -69,6 +69,18 @@ const taskRepository = {
         }
         return actualTasks;
     },
+    getAllCompletedTasksInLobby: async function (pool, lobby) {
+        const tasks = await pool.query('SELECT * FROM players_tasks WHERE lobby_id = ? AND isCompleted = 1 ', [lobby[0].id]);
+        return tasks[0];
+    },
+    getAllUnfinishedTasksInLobby: async function (pool, lobby) {
+        const tasks = await pool.query('SELECT * FROM players_tasks WHERE lobby_id = ? AND isCompleted = 0 ', [lobby[0].id]);
+        return tasks[0];
+    },
+    getAllTasksInLobby: async function (pool, lobby) {
+        const tasks = await pool.query('SELECT * FROM players_tasks WHERE lobby_id = ? ', [lobby[0].id]);
+        return tasks[0];
+    },
 };
 
 module.exports = taskRepository;
