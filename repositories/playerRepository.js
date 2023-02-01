@@ -21,6 +21,12 @@ const playerRepository = {
     updateAvatar: async function (pool, avatar, player_id) {
         const updateAvatar = await pool.query('UPDATE players SET avatar = ? WHERE id = ?', [avatar, player_id]);
     },
+    updateGlobalWins: async function (pool, player) {
+        const updatedPlayer = await pool.query('UPDATE players SET  wins = ? WHERE id = ?', [player[0].wins + 1, player[0].id]);
+    },
+    updateGamesPlayed: async function (pool, player) {
+        const updatedPlayer = await pool.query('UPDATE players SET played_games = ? WHERE id = ?', [player.played_games + 1, player.players_id]);
+    },
 };
 
 module.exports = playerRepository;
