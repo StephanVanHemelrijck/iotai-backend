@@ -340,9 +340,9 @@ app.post('/lobby/:lobbyIC/start', async (req, res) => {
     const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobbyIC);
     if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
     const players = await lobbyRepository.getAllPlayersInLobby(pool, lobby[0]);
-
     players.forEach(async (player) => {
-        console.log(player);
+        // Assign tasks
+        assignTasksToPlayers(3, player.players_id, lobby[0].id);
         await playerRepository.updateGamesPlayed(pool, player);
     });
 
@@ -632,6 +632,25 @@ app.put('/task/:id', async (req, res) => {
     }
 });
 
+async function assignTasksToPlayers(amount, player_id, lobby_id) {
+    // Get all tasks
+    const allTasks = await taskRepository.getAllTasks(pool);
+    const taskIndexes = [];
+    while (taskIndexes.length < amount) {
+        const r = Math.ceil(Math.random() * allTasks.length);
+        if (taskIndexes.indexOf(r) === -1) taskIndexes.push(r);
+    }
+    console.log(taskIndexes);
+    // Select X amount of unique tasks
+    const selectedTasks = [];
+    for (let taskIndex of taskIndexes) {
+        const task = await taskRepository.getTaskById(pool, taskIndex);
+        selectedTasks.push(task[0]);
+    }
+    // Assign task
+    await taskRepository.assignTasksToPlayer(pool, player_id, lobby_id, selectedTasks);
+}
+
 /**
  * Endpoint to assign a player an X amount of unique tasks in certain lobby
  *
@@ -652,36 +671,37 @@ app.post('/tasks/assign', async (req, res) => {
         map.set('amount', amount);
         const validation = validator.validateUserInput(map);
         if (validation.status == 400) return res.status(400).send({ status: validation.status, message: validation.message });
+        assignTasksToPlayers(3, player_id, lobby_id);
 
-        // Get amount of stored tasks in DB
-        let amountOfTasks = await taskRepository.getAllTasks(pool);
-        amountOfTasks = amountOfTasks.length;
-        if (amount > amountOfTasks)
-            return res.status(400).send({
-                status: 400,
-                message: `There are currently ${amountOfTasks} tasks stored, therefore can't assign more than ${amountOfTasks} tasks to a single player`,
-                tried_to_assign: amount,
-            });
-        // Store indexes in array so we can take out an index whenever its selected
-        const taskIndexes = [];
-        for (i = 0; i <= amountOfTasks - 1; i++) {
-            taskIndexes.push(i);
-        }
+        // // Get amount of stored tasks in DB
+        // let amountOfTasks = await taskRepository.getAllTasks(pool);
+        // amountOfTasks = amountOfTasks.length;
+        // if (amount > amountOfTasks)
+        //     return res.status(400).send({
+        //         status: 400,
+        //         message: `There are currently ${amountOfTasks} tasks stored, therefore can't assign more than ${amountOfTasks} tasks to a single player`,
+        //         tried_to_assign: amount,
+        //     });
+        // // Store indexes in array so we can take out an index whenever its selected
+        // const taskIndexes = [];
+        // for (i = 0; i <= amountOfTasks - 1; i++) {
+        //     taskIndexes.push(i);
+        // }
 
-        const tasksToAssign = [];
+        // const tasksToAssign = [];
 
-        // => Generate X random indexes between 0 and the length of all tasks - 1
-        for (i = 0; i < amount; i++) {
-            const randomIndex = Math.floor(Math.random() * taskIndexes.length);
-            console.log('Random index: ', randomIndex);
-            const randomTask = taskIndexes[randomIndex];
-            tasksToAssign.push(randomTask);
-            taskIndexes.splice(randomIndex, 1);
-        }
+        // // => Generate X random indexes between 0 and the length of all tasks - 1
+        // for (i = 0; i < amount; i++) {
+        //     const randomIndex = Math.floor(Math.random() * taskIndexes.length);
+        //     console.log('Random index: ', randomIndex);
+        //     const randomTask = taskIndexes[randomIndex];
+        //     tasksToAssign.push(randomTask);
+        //     taskIndexes.splice(randomIndex, 1);
+        // }
 
-        const tasks = await taskRepository.assignTasksToPlayer(pool, player_id, lobby_id, tasksToAssign);
+        // const tasks = await taskRepository.assignTasksToPlayer(pool, player_id, lobby_id, tasksToAssign);
 
-        res.status(200).send(tasks);
+        // res.status(200).send(tasks);
     } catch (err) {
         console.log(err);
     }
