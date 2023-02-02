@@ -47,6 +47,12 @@ const lobbyRepository = {
         });
         return players;
     },
+    startMeeting: async function (pool, lobby) {
+        const meeting = await pool.query('UPDATE lobbies SET meeting_is_active = 1 WHERE id = ?', [lobby[0].id]);
+    },
+    endMeeting: async function (pool, lobby) {
+        const meeting = await pool.query('UPDATE lobbies set meeting_is_active = 0 WHERE id = ?', [lobby[0].id]);
+    },
 };
 
 module.exports = lobbyRepository;

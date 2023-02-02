@@ -444,6 +444,32 @@ app.post('/lobby/:lobbyIC/end-check', async (req, res) => {
     }
 });
 
+app.post('/lobby/:lobbyIC/start-meeting', async (req, res) => {
+    try {
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobbyIC);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        await lobbyRepository.startMeeting(pool, lobby);
+
+        res.status(200).send({ status: 200, message: `Lobby ${lobby[0].invite_code} started a meeting` });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.post('/lobby/:lobbyIC/end-meeting', async (req, res) => {
+    try {
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobbyIC);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        await lobbyRepository.endMeeting(pool, lobby);
+
+        res.status(200).send({ status: 200, message: `Lobby ${lobby[0].invite_code} end a meeting` });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
 app.get('/roles', async (req, res) => {
     try {
         const roles = await roleRepository.getAllRoles(pool);
