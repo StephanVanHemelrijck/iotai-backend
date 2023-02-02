@@ -47,7 +47,9 @@ CREATE TABLE tasks(
     name VARCHAR(60),
     img VARCHAR(60),
     description VARCHAR(255),
-    answer VARCHAR(60)
+    answer VARCHAR(60),
+	positionX VARCHAR(60),
+    positionY VARCHAR(60)
 );
 
 CREATE TABLE players_tasks(	
@@ -59,16 +61,16 @@ CREATE TABLE players_tasks(
 
 
 
-INSERT INTO tasks (name, description, img, answer)
-	VALUES('Minerals','What mineral is this?', 'mineraal.jpg','Azurite');
-INSERT INTO tasks (name, description, img, answer)
-	VALUES('Magnification glass','What group of hominins do you see when looking through these goggles?','vergrootglas.jpg', 'Australopithecus');
-INSERT INTO tasks (name, description, img, answer)
-	VALUES('Mosasaur','The mosasaur is not a dinosaur. To which group of animals are they related?','mosasaurus.jpg','Snakes');
-INSERT INTO tasks (name, description, img, answer)
-	VALUES('Meteorite','Where did this meteorite fall?','metoriet.jpg','Tintigny');
-INSERT INTO tasks (name, description, img, answer)
-	VALUES('Femur','How much did the dinosaur to which the third femur in the photo belongs weigh in KG?','dijbeen.jpg','563');
+INSERT INTO tasks (name, description, img, answer, positionX, positionY)
+	VALUES('Minerals','What mineral is this?', 'mineraal.jpg','Azurite','70px','50px');
+INSERT INTO tasks (name, description, img, answer, positionX, positionY)
+	VALUES('Magnification glass','What group of hominins do you see when looking through these goggles?','vergrootglas.jpg', 'Australopithecus','170px','190px');
+INSERT INTO tasks (name, description, img, answer, positionX, positionY)
+	VALUES('Mosasaur','The mosasaur is not a dinosaur. To which group of animals are they related?','mosasaurus.jpg','Snakes','60px','155px');
+INSERT INTO tasks (name, description, img, answer, positionX, positionY)
+	VALUES('Meteorite','Where did this meteorite fall?','meteoriet.jpg','Tintigny','125px','5px');
+INSERT INTO tasks (name, description, img, answer, positionX, positionY)
+	VALUES('Femur','How much did the dinosaur to which the third femur in the photo belongs weigh in KG?','dijbeen.jpg','563','90px','225px');
 
 INSERT INTO players (name, password, email, wins, played_games,avatar)
     VALUES ('Stephan', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '5', '12','tree-g');

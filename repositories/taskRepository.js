@@ -41,6 +41,15 @@ const taskRepository = {
         }
         return actualTasks;
     },
+    getUnfinishedTasksForPlayer: async function (pool, player, lobby) {
+        let actualTasks = [];
+        const tasks = await pool.query('SELECT * FROM players_tasks WHERE player_id = ? AND lobby_id = ? AND isCompleted = 0', [player[0].id, lobby[0].id]);
+        for (let i = 0; i < tasks[0].length; i++) {
+            const actualTask = await this.getTaskById(pool, tasks[0][i].task_id);
+            actualTasks.push(actualTask[0]);
+        }
+        return actualTasks;
+    },
     completeTask: async function (pool, task, player, lobby) {
         const completedTask = await pool.query('UPDATE players_tasks SET isCompleted = ? WHERE task_id = ? AND player_id = ? AND lobby_id = ?', [
             1,

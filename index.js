@@ -662,6 +662,74 @@ app.post('/tasks/assign', async (req, res) => {
 });
 
 /**
+ * Endpoint that returns a list of tasks for a certain player in a certain lobby
+ *
+ * @body player_id
+ * @body lobby_id
+ *
+ * @return tasks
+ */
+app.post('/tasks/player/all', async (req, res) => {
+    try {
+        const map = new Map();
+        map.set('player_id', req.body.player_id);
+        map.set('lobby_ic', req.body.lobby_ic);
+        map.set('amount', req.body.amount);
+
+        const validation = validator.validateUserInput(map);
+        if (validation.status == 400) return res.status(400).send({ status: validation.status, message: validation.message });
+
+        // Get player
+        const player = await playerRepository.getPlayerByID(pool, req.body.player_id);
+        if (player.length == 0) return res.status(400).send({ status: 400, message: 'Player does not exist' });
+
+        // Get lobby
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.body.lobby_ic);
+        if (lobby[0].length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+        // Is player in lobby
+
+        const isInLobby = await lobbyRepository.isPlayerInLobby(pool, player, lobby);
+        if (isInLobby.length == 0 || lobby[0] == undefined)
+            return res.status(400).send({ status: 400, message: `${player[0].name} is not in lobby "${lobby[0].invite_code}"` });
+        // Return tasks for player in lobby
+        const tasks = await taskRepository.getUnfinishedTasksForPlayer(pool, player, lobby);
+        if (tasks.length == 0) return res.status(400).send({ status: 400, message: `${player[0].name} has no tasks left in lobby "${lobby[0].invite_code}"` });
+
+        res.status(200).send({ tasks });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ * Endpoint that returns progress of completed tasks in a certain lobby
+ *
+ * @body lobby_invite_code
+ *
+ * @returns progress
+ */
+app.get('/tasks/progress/:lobbyIC', async (req, res) => {
+    try {
+        // check if lobby exists
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobbyIC);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+        // get all tasks in lobby
+        const allTasks = await taskRepository.getAllTasksInLobby(pool, lobby);
+        if (allTasks.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not have any tasks' });
+        // get all completed tasks in lobby
+        const completedTasks = await taskRepository.getAllCompletedTasksInLobby(pool, lobby);
+        if (completedTasks.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not have any completed tasks' });
+        // convert to %
+        res.send({
+            completed_tasks_count: completedTasks.length,
+            all_tasks_count: allTasks.length,
+            progress: Math.round((completedTasks.length / allTasks.length) * 100),
+        });
+    } catch (err) {
+        console.log(err);
+    }
+});
+/**
  *  Endpoint that allows a player to complete a certain task in their lobby
  *
  *
@@ -699,7 +767,7 @@ app.put('/task/:task_id/complete', async (req, res) => {
         const tasksForPlayer = await taskRepository.getAllTasksForPlayerById(pool, player, lobby);
 
         res.status(200).send({
-            status: 400,
+            status: 200,
             message: `${player[0].name} has completed task "${task[0].name}" in lobby "${lobby[0].invite_code}"`,
             tasks: tasksForPlayer,
         });
