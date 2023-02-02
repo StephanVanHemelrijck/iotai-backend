@@ -720,7 +720,6 @@ app.post('/tasks/player/all', async (req, res) => {
         const map = new Map();
         map.set('player_id', req.body.player_id);
         map.set('lobby_ic', req.body.lobby_ic);
-        map.set('amount', req.body.amount);
 
         const validation = validator.validateUserInput(map);
         if (validation.status == 400) return res.status(400).send({ status: validation.status, message: validation.message });
@@ -761,10 +760,10 @@ app.get('/tasks/progress/:lobbyIC', async (req, res) => {
         if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
         // get all tasks in lobby
         const allTasks = await taskRepository.getAllTasksInLobby(pool, lobby);
-        if (allTasks.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not have any tasks' });
+        if (allTasks.length == 0) return res.status(200).send({ status: 200, message: 'Lobby does not have any tasks' });
         // get all completed tasks in lobby
         const completedTasks = await taskRepository.getAllCompletedTasksInLobby(pool, lobby);
-        if (completedTasks.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not have any completed tasks' });
+        if (completedTasks.length == 0) return res.status(200).send({ status: 200, message: 'Lobby does not have any completed tasks' });
         // convert to %
         res.send({
             completed_tasks_count: completedTasks.length,

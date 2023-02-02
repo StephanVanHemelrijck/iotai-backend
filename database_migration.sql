@@ -19,7 +19,8 @@ CREATE TABLE lobbies (
 	invite_code VARCHAR(10),
     player_count INT,
     started BOOLEAN,
-    ended BOOLEAN
+    ended BOOLEAN,
+    meeting_is_active BOOLEAN
 );
 
 CREATE TABLE players_lobbies (
@@ -87,8 +88,8 @@ INSERT INTO players (name, password, email, wins, played_games,avatar)
 INSERT INTO players (name, password, email, wins, played_games,avatar)
     VALUES ('Cedric', '$2a$09$zW/1NgezlPvGd8SxxvY7ouCCXQPSoOZnYWE21tVxmt4/gAs1CGyky', 'myemail@outlook.com', '2', '7','baby-g');
     
-INSERT INTO lobbies (player_limit, duration, invite_code,player_count,started,ended)
-	VALUES (15,90,'GNHNTR',6,false,false);
+INSERT INTO lobbies (player_limit, duration, invite_code,player_count,started,ended,meeting_is_active)
+	VALUES (15,90,'GNHNTR',6,false,false,false);
     
 INSERT INTO players_lobbies (players_id,lobbies_id)
 	VALUES (2,1);
