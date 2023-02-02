@@ -28,18 +28,15 @@ const taskRepository = {
         return task[0];
     },
     assignTasksToPlayer: async function (pool, player_id, lobby_id, tasks) {
-        let actualTasks = [];
-        for (i = 0; i < tasks.length; i++) {
-            const actualTask = await this.getTaskById(pool, tasks[i] + 1);
-            actualTasks.push(actualTask[0]);
-            // Assign in DB
-            const assignToPlayer = await pool.query('INSERT INTO players_tasks (task_id,player_id,lobby_id,isCompleted) VALUES (?,?,?,0)', [
-                tasks[i] + 1,
+        console.log(tasks);
+        tasks.forEach(async (task) => {
+            const assignTaskToPlayer = await pool.query('INSERT INTO players_tasks (task_id, player_id, lobby_id, isCompleted) VALUES (?,?,?,0)', [
+                task.id,
                 player_id,
                 lobby_id,
             ]);
-        }
-        return actualTasks;
+        });
+        return tasks;
     },
     getUnfinishedTasksForPlayer: async function (pool, player, lobby) {
         let actualTasks = [];
