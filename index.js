@@ -409,7 +409,7 @@ app.post('/lobby/:lobbyIC/end-check', async (req, res) => {
         };
         // Decide winners
         // Predators win if there are just as many scientists as predators alive
-        if (alivePredators[0].length == aliveScientists[0].length) {
+        if (alivePredators[0].length >= aliveScientists[0].length) {
             const predators = await statRepository.getPredatorsInLobby(pool, lobby[0]);
             for (i = 0; i < predators[0].length; i++) {
                 const predatorObj = await playerRepository.getPlayerByID(pool, predators[0][i].player_id);
