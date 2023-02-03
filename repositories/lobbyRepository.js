@@ -53,6 +53,12 @@ const lobbyRepository = {
     endMeeting: async function (pool, lobby) {
         const meeting = await pool.query('UPDATE lobbies set meeting_is_active = 0 WHERE id = ?', [lobby[0].id]);
     },
+    getAlivePlayers: async function (pool, lobby_id) {
+        const alivePlayers = await pool.query('SELECT * FROM stats INNER JOIN players ON stats.player_id = players.id WHERE isAlive = 1 AND lobby_id = ?', [
+            lobby_id,
+        ]);
+        return alivePlayers[0];
+    },
 };
 
 module.exports = lobbyRepository;

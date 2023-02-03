@@ -823,6 +823,24 @@ app.put('/task/:task_id/complete', async (req, res) => {
     }
 });
 
+app.get('/player/:player_id/lobby/:lobby_id', async (req, res) => {
+    try {
+        const isPlayerAlive = await statRepository.isPlayerAlive(pool, req.params.player_id, req.params.lobby_id);
+        res.status(200).send(isPlayerAlive);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.get('/lobby/:lobby_id/players-alive', async (req, res) => {
+    try {
+        const playersAlive = await lobbyRepository.getAlivePlayers(pool, req.params.lobby_id);
+        res.status(200).send(playersAlive);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
 /**
  * Endpoint that eliminates a player (eject)
  *

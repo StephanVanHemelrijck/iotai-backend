@@ -29,6 +29,14 @@ const statRepository = {
     updateIsPlayerAlive: async function (pool, player_id, lobby_id, isAlive) {
         const updatePlayer = await pool.query('UPDATE stats SET isAlive = ? WHERE player_id = ? AND lobby_id = ?', [isAlive, player_id, lobby_id]);
     },
+    isPlayerAlive: async function (pool, player_id, lobby_id) {
+        const player = await pool.query('SELECT * FROM stats WHERE player_id = ? AND lobby_id = ?', [player_id, lobby_id]);
+        if (player[0].isAlive) {
+            console.log(player[0].isAlive);
+        }
+        console.log(player[0]);
+        return player[0][0].isAlive == 0 ? false : true;
+    },
 };
 
 module.exports = statRepository;
