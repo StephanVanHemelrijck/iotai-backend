@@ -60,6 +60,12 @@ CREATE TABLE players_tasks(
     isCompleted BOOLEAN
 );
 
+CREATE TABLE votes(
+	voter_id INT,
+    voted_player_id INT,
+    lobby_id INT
+);
+
 
 
 INSERT INTO tasks (name, description, img, answer, positionX, positionY)

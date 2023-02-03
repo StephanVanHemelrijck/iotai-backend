@@ -15,6 +15,7 @@ const lobbyRepository = require('./repositories/lobbyRepository.js');
 const statRepository = require('./repositories/statsRepository.js');
 const roleRepository = require('./repositories/roleRepository.js');
 const taskRepository = require('./repositories/taskRepository.js');
+const voteRepository = require('./repositories/voteRepository.js');
 
 // Express APP
 const app = express();
@@ -862,6 +863,110 @@ app.put('/player/eject', async (req, res) => {
         const isAlive = 0;
         const updatePlayer = await statRepository.updateIsPlayerAlive(pool, player_id, lobby_id, isAlive);
         res.status(200).send({ status: 200, message: `Player with id: ${player_id} has been ejected in lobby: '${req.body.lobby_invite_code}'` });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+// Vote on player
+// Get player with most votes
+
+/**
+ * Endpoint to vote a player out
+ *
+ * @body voter_id - player who did the vote
+ * @body voted_id - player who got voted on
+ * @body lobby_ic - invite code for lobby
+ *
+ * @returns message
+ */
+app.post('/vote', async (req, res) => {
+    try {
+        const map = new Map();
+        map.set('voter_id', req.body.voter_id);
+        map.set('voted_id', req.body.voted_id);
+        map.set('lobby_ic', req.body.lobby_ic);
+        const validation = validator.validateUserInput(map);
+        if (validation.status == 400) return res.status(validation.status).send({ status: validation.status, message: validation.message });
+
+        // Get lobby
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.body.lobby_ic);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        // get player who initialized the vote
+        const voter = await playerRepository.getPlayerByID(pool, req.body.voter_id);
+        if (voter.length == 0) return res.status(400).send({ status: 400, message: 'Player does not exist' });
+        // get played who got voted on
+        const votedPlayer = await playerRepository.getPlayerByID(pool, req.body.voted_id);
+        if (votedPlayer.length == 0) return res.status(400).send({ status: 400, message: 'Player does not exist' });
+
+        // update votes (table)
+        const vote = await voteRepository.voteInLobby(pool, voter, votedPlayer, lobby);
+
+        res.status(200).send({ status: 200, message: 'VOTED' });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.delete('/votes/:lobby_ic', async (req, res) => {
+    try {
+        // Get lobby
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobby_ic);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        await voteRepository.deleteVotesFromLobby(pool, lobby);
+        res.status(200).send({ status: 200, message: `Votes deleted from lobby ${lobby[0].invite_code}` });
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ * Endpoint that retrieves most voted person in a lobby
+ *
+ * @params lobby_ic
+ *
+ * @return player
+ */
+app.get('/most-voted-player/:lobby_ic', async (req, res) => {
+    try {
+        // Get lobby
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobby_ic);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        let mostVotedPlayer = await voteRepository.getMostVotedPlayerInLobby(pool, lobby);
+        mostVotedPlayer = mostVotedPlayer[0];
+
+        const player = await playerRepository.getPlayerByID(pool, mostVotedPlayer.voted_player_id);
+        const mostVotedPlayerObj = {
+            votes: mostVotedPlayer.amount_votes,
+            player: player[0],
+        };
+
+        res.status(200).send(mostVotedPlayerObj);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+/**
+ * Endpoint that returns vote count from specific lobby
+ *
+ * @params lobby_ic
+ *
+ * @return voteCount
+ *
+ */
+app.get('/votes/:lobby_ic/count', async (req, res) => {
+    try {
+        const lobby = await lobbyRepository.getLobbyByInviteCode(pool, req.params.lobby_ic);
+        if (lobby.length == 0) return res.status(400).send({ status: 400, message: 'Lobby does not exist' });
+
+        let voteCount = await voteRepository.getVoteCount(pool, lobby);
+        voteCount = voteCount.length;
+
+        res.status(200).send({ status: 200, voteCount });
     } catch (err) {
         console.log(err);
     }
